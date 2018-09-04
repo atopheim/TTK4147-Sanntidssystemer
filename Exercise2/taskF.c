@@ -2,24 +2,47 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#define NUM_PHILOSOPHERS	5
+
 pthread_mutex_t waiter;
-pthread_mutex_t forks[5];
-int forks_size = sizeof(forks)/sizeof(*forks);
+pthread_mutex_t forks[NUM_PHILOSOPHERS];
+int num_forks = sizeof(forks)/sizeof(*forks);
+
+int g_seat_num = 0;
+
+// Assign each philosopher a seat from 0 to NUM_PHILOSOPHERS - 1
+int assign_seat() {
+	int seat;
+	pthread_mutex_lock(&waiter);
+
+	// Assign seat number
+	seat = g_seat_num++;
+
+	if (g_seat_num > NUM_PHILOSOPHERS) {
+		seat = -1;
+	}
+	pthread_mutex_unlock(&waiter);
+
+	return seat;
+}
 
 void think(int philosopher) {
 	printf("Philosopher %d is thinking.\r\n", philosopher);
-	sleep(1);
+	usleep(500*1000);
 }
 
 void eat(int philosopher){
 	printf("Philosopher %d is eating.\r\n", philosopher);
-	sleep(3);
+	sleep(1);
 }
 
 void* dining_philosophers_handler(void* args) {
-	// Args is philosopher number
-	int philosopher = *((int*) args);
-	int l_fork_i = (args == 0) ? forks_size - 1 : philosopher - 1;
+	// Let waiter assign seat number to philosopher
+	int philosopher = assign_seat();
+
+	// Left fork is philosopher - 1 (wraps around)
+	int l_fork_i = philosopher == 0 ? num_forks - 1 : philosopher - 1;
+	// Right fork is philosopher
 	int r_fork_i = philosopher;
 
 	while (1) {
@@ -40,26 +63,30 @@ void* dining_philosophers_handler(void* args) {
 	    // Put down left fork
 	    pthread_mutex_unlock(forks + l_fork_i);
 
-	    // Philosopher is done eating
+	    // Tell waiter philosopher is done eating
 	    pthread_mutex_unlock(&waiter);
 	}
 
-
+	return NULL;
 }
 
 int main(){
-    pthread_t philos[5];
+    pthread_t philos[NUM_PHILOSOPHERS];
 	int philo_size = sizeof(philos)/sizeof(*philos);
 
 	// Init mutexes
 	pthread_mutex_init(&waiter, NULL);
-	for (int i = 0; i < forks_size; i++) {
+	for (int i = 0; i < num_forks; i++) {
     	pthread_mutex_init(forks + i, NULL);
     }
 
 	// Create threads
 	for (int i = 0; i < philo_size; i++) {
+		// Let waiter assign number to philosopher
+		pthread_mutex_lock(&waiter);
 		pthread_create(philos + i, NULL, dining_philosophers_handler, &i);
+		pthread_mutex_unlock(&waiter);
+		sleep(1);
 	}
 
     // Wait for threads to finish execution
@@ -69,7 +96,7 @@ int main(){
 
     // Destroy mutexes
     pthread_mutex_destroy(&waiter);
-	for (int i = 0; i < forks_size; i++) {
+	for (int i = 0; i < num_forks; i++) {
     	pthread_mutex_destroy(forks + i);
     }
 }
