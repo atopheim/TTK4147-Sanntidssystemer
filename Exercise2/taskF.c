@@ -28,12 +28,12 @@ int assign_seat() {
 
 void think(int philosopher) {
 	printf("Philosopher %d is thinking.\r\n", philosopher);
-	usleep(500*1000);
+	sleep(1);
 }
 
 void eat(int philosopher){
 	printf("Philosopher %d is eating.\r\n", philosopher);
-	sleep(1);
+	sleep(2);
 }
 
 void* dining_philosophers_handler(void* args) {
@@ -41,9 +41,9 @@ void* dining_philosophers_handler(void* args) {
 	int philosopher = assign_seat();
 
 	// Left fork is philosopher - 1 (wraps around)
-	int l_fork_i = philosopher == 0 ? num_forks - 1 : philosopher - 1;
+	int l_fork = philosopher == 0 ? num_forks - 1 : philosopher - 1;
 	// Right fork is philosopher
-	int r_fork_i = philosopher;
+	int r_fork = philosopher;
 
 	while (1) {
 		think(philosopher);
@@ -52,19 +52,19 @@ void* dining_philosophers_handler(void* args) {
 		pthread_mutex_lock(&waiter);
 
 		// Pick up left fork
-	    pthread_mutex_lock(forks + l_fork_i);
+	    pthread_mutex_lock(&forks[l_fork]);
 		// Pick up right fork
-		pthread_mutex_lock(forks + r_fork_i);
+		pthread_mutex_lock(&forks[r_fork]);
   
+	    // Tell waiter philosopher has picked up both forks
+	    pthread_mutex_unlock(&waiter);
+
     	eat(philosopher);
 
 	    // Put down right fork
-	    pthread_mutex_unlock(forks + r_fork_i);
+	    pthread_mutex_unlock(&forks[r_fork]);
 	    // Put down left fork
-	    pthread_mutex_unlock(forks + l_fork_i);
-
-	    // Tell waiter philosopher is done eating
-	    pthread_mutex_unlock(&waiter);
+	    pthread_mutex_unlock(&forks[l_fork]);
 	}
 
 	return NULL;
@@ -82,11 +82,8 @@ int main(){
 
 	// Create threads
 	for (int i = 0; i < philo_size; i++) {
-		// Let waiter assign number to philosopher
-		pthread_mutex_lock(&waiter);
-		pthread_create(philos + i, NULL, dining_philosophers_handler, &i);
-		pthread_mutex_unlock(&waiter);
-		sleep(1);
+		// Let waiter assign seat/number to philosopher
+		pthread_create(philos + i, NULL, dining_philosophers_handler, NULL);
 	}
 
     // Wait for threads to finish execution

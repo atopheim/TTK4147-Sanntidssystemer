@@ -19,9 +19,9 @@ void* fn(void* args){
 	}
 	printf("Local variable: %ld\r\n", var);
 
-	sem_wait(&mutex);
+	//sem_wait(&mutex);
 	printf("Global variable: %ld\r\n", g_var);
-	sem_post(&mutex);
+	//sem_post(&mutex);
 
     return NULL;
 }
