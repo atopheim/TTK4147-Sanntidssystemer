@@ -7,15 +7,15 @@
 #include "udp.h"
 #include "time.h"
 
-double Kp = 1;
-double Ki = 10;
-double Kd = 0;
+float Kp = 10;
+float Ki = 800;
+float Kd = 0.01;
 
 
 // Decodes message on the form "GET_ACK:<DECIMAL NUMBER>" and returns the decimal number
-int decode_msg(char *msg, double *y) {
+int decode_msg(char *msg, float *y) {
 	if (msg[0] == 'S') { // "SIGNAL"
-		printf("msg: %s\r\n", msg);
+		//printf("msg: %s\r\n", msg);
 		return -1;	
 	}
 
@@ -24,14 +24,14 @@ int decode_msg(char *msg, double *y) {
 }
 
 // Encodes msg with val on the form "SET:123.456"
-void encode_msg(char *msg, double val) {
+void encode_msg(char *msg, float val) {
 	sprintf(msg, "SET:%f", val);
 }
 
 void pid_controller(void *args) {
-	double error, integral, derivative, prev_error, y, u = 0;
-	double reference = 1;
-	double dt = 0.004;
+	float error, integral, derivative, prev_error, y, u = 0;
+	float reference = 1;
+	float dt = 0.001;
 
 	long dt_nanosec = dt * 1000*1000*1000;
 
@@ -45,7 +45,7 @@ void pid_controller(void *args) {
   memset(recvBuf, 0, sizeof(recvBuf));
   
 	// Start simulation
-	printf("Starting simulation\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+	//printf("Starting simulation\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
   sprintf(sendBuf, "START");    
   udpconn_send(conn, sendBuf);
 
@@ -61,7 +61,7 @@ void pid_controller(void *args) {
 				// Stop simulation
 				sprintf(sendBuf, "STOP");    
 				udpconn_send(conn, sendBuf);
-				printf("Ended simulation\r\n");
+				//printf("Ended simulation\r\n");
 				break;
 		} 
 		else if (diff.tv_sec >= 1) { // One second has passed
@@ -84,12 +84,16 @@ void pid_controller(void *args) {
 
 		u = Kp*error + Kd*derivative + Ki*integral;
 		
-		printf("NEW ITERATION \r\n\r\n");
+		// Send u to server
+		encode_msg(sendBuf, u);
+		udpconn_send(conn, sendBuf);	
+
+		/*printf("NEW ITERATION \r\n\r\n");
 		printf("reference: %f\r\n", reference);
 		printf("y: %f\r\n", y);
 		printf("u: %f\r\n", u);
 		printf("error: %f\r\n", error);
-		
+		*/
 
 		// Find time spent in current iteration
 		// If dt time has not passed, sleep for the remaining time
@@ -100,10 +104,6 @@ void pid_controller(void *args) {
 			const struct timespec request = timespec_sub(dt_timespec, diff);
 			clock_nanosleep(CLOCK_MONOTONIC, 0, &request, NULL);
 		}
-
-		// Send u to server
-		encode_msg(sendBuf, u);
-		udpconn_send(conn, sendBuf);		
 		
 	}
 
