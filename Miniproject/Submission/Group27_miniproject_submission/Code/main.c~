@@ -54,6 +54,7 @@ void* pi_controller() {
 
 	// Controller loop
 	while (1) {
+		// Get y from server
 		udpconn_send(conn, "GET");
 		
 		// Wait for network_read thread to finish reading y
