@@ -48,7 +48,7 @@ void* pi_controller() {
 	float dt = 0.002;
 	float dt_nanosec = dt * 1000*1000*1000;
 
-  struct timespec prev, waketime;
+  	struct timespec prev, waketime;
 	struct timespec dt_timespec = {0, (long) dt_nanosec};	
 	clock_gettime(CLOCK_MONOTONIC, &prev);
 
@@ -79,10 +79,9 @@ void* pi_controller() {
 
 // Thread function. Continuously reads from network
 void* network_read() {
-  char recvBuf[32];
-  memset(recvBuf, 0, sizeof(recvBuf));
+	char recvBuf[32];
+	memset(recvBuf, 0, sizeof(recvBuf));
 	int res;
-
 	while (1) {
 		// Read and decode message
 		udpconn_receive(conn, recvBuf, sizeof(recvBuf));
@@ -120,7 +119,7 @@ int main()
 	
 	// Start simulation
 	reference = 1.0;
-  udpconn_send(conn, "START");
+  	udpconn_send(conn, "START");
 
 	// Sleep 1 second before changing reference value
 	struct timespec second_timespec = {1, 0};
@@ -131,7 +130,7 @@ int main()
 	clock_nanosleep(CLOCK_MONOTONIC, 0, &second_timespec, NULL);
 
 	// Stop simulation
-  udpconn_send(conn, "STOP");
+  	udpconn_send(conn, "STOP");
 
 	// Clean-up
 	udpconn_delete(conn);
